@@ -349,10 +349,10 @@
     \@department~(\@shortdepartment)
     \vspace{2cm}
     
-    {\MakeUppercase{\@worktype}}
+    {\@worktype}
     \vspace{0.5cm}
     
-    \@title
+    {\MakeUppercase{\@title}}
     \vspace{1.0cm}
     
   \end{center}
