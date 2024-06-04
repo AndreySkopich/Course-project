@@ -5,7 +5,7 @@ from random import *
 from config import *
 
 def main():
-	global title_score, monitor_w, monitor_h
+	global title_score
 	##Загрузка игровой карты из файла###
 	#чтение карты из файла
 	map_file = open('map.txt', 'r')
@@ -57,8 +57,7 @@ def main():
 						game_sc.delete(self.bullet)
 						bullets.remove(self)
 						if obj.model == brick:
-							game_sc.delete(obj.block_img)
-							objects.remove(obj)
+							game_sc.delete(obj.model)
 						break
 				
 				#проверка на столкновение
@@ -66,12 +65,13 @@ def main():
 				if self.ouner == 'player':
 					for obj in enemies:
 						if (obj.x <= self.x <= obj.x + TILE) and (obj.y <= self.y <= obj.y + TILE):
-							#удаление снаряда
+							#удаление сеарядов
 							game_sc.delete(self.bullet)
 							bullets.remove(self)
+							obj.explosion()
 							#удаление (уничтожение) танка
 							enemies.remove(obj)
-							obj.explosion()
+							game_sc.delete(obj.enemy_img)
 							obj.life = False
 							break
 				#с игроком
@@ -82,20 +82,10 @@ def main():
 							bullets.remove(self)
 							#удаление (уничтожение) танка
 							player.lives -= 1
-							#изменение кол-ва жизней в интерфейсе
-							if (player.lives>=0):
-								lives_label['text'] =str(player.lives)
+							lives_label['text'] =str(player.lives)
 				
 	class Enemy:
 		def __init__(self, x, y):
-			'''
-			Инициализация вражеского танка
-			для начала он заносится в список врагов
-			он имеет координаты x, y,
-			скорости (направления) vx, vy,
-			статус жив или мертв life и
-			свое изображение на поле
-			'''
 			#координаты движения танков
 			enemies.append(self)
 			#координаты
@@ -185,24 +175,18 @@ def main():
 				game_sc.after(1000, self.shoot)
 			
 		def explosion(self):
-			'''
-			Уничтожение танка с эффектом:
-			смена картинки танка на 3 
-			последовательные изображения
-			взрыва и удаление самого танка
-			'''
-			if (self.i<=2):
-				game_sc.itemconfig(self.enemy_img, image=bang[self.i])
+			'''эффект взрыва танка'''
+			exp=game_sc.create_image(self.x, self.y, anchor=NW, image=bang[self.i])
+			if (self.i<2):
+				exp=game_sc.create_image(self.x, self.y, anchor=NW, image=bang[self.i])
 				self.i+=1
-				game_sc.after(anim_speed, self.explosion)
+				game_sc.after(100, self.explosion)
 			else:
 				self.i=0
-				game_sc.delete(self.enemy_img)
+				game_sc.delete(exp)
 				
+		
 		def update(self):
-			'''
-			Вся логика передвижения и стрельбы танка
-			'''
 			#записываем начальные координаты
 			old_x = self.x
 			old_y = self.y
@@ -213,8 +197,8 @@ def main():
 			
 			#проверка на столкновение с краями поля
 			#в таком случае, враг поменяет (перегенерируют) свое направление
-			if (self.x + TILE > WIDTH) or (self.x < 0) or (self.y + 
-				TILE > HEIGHT) or (self.y < 0):
+			if (self.x + TILE + E_SPEED >= WIDTH) or (self.x - E_SPEED <= 0) or (self.y + 
+				TILE + E_SPEED >= HEIGHT) or (self.y - E_SPEED <= 0):
 				#меняем направление
 				self.change_dir(old_x, old_y)
 			
@@ -248,8 +232,6 @@ def main():
 			#направление для снаряда
 			self.direct = 'up'
 			self.lives = 3
-			
-			self.i=0
 			
 			#время задержки и таймер для стрельбы
 			self.shotTimer = 0
@@ -297,24 +279,7 @@ def main():
 				#таймер на запрет стрельбы
 				self.shotTimer = self.shotDelay
 				game_sc.after(fire_cooldown, cooldown)
-		
-		def explosion(self):
-			'''
-			Уничтожение танка с эффектом:
-			смена картинки танка на 3 
-			последовательные изображения
-			взрыва и удаление самого танка
-			(перенос функции из класса Enemy
-			для эффекта взрыва игрока)
-			'''
-			if (self.i<=2):
-				game_sc.itemconfig(self.player_img, image=bang[self.i])
-				self.i+=1
-				game_sc.after(anim_speed, self.explosion)
-			else:
-				self.i=0
-				game_sc.delete(self.player_img)
-		
+
 		def stop(self, event):
 			if (event.keysym == 'Up' or event.keysym == 'Down'):
 				self.vy = 0
@@ -362,15 +327,16 @@ def main():
 			self.y = y
 			
 			#отрисовка блока на поле
-			self.block_img=game_sc.create_image(self.x, self.y, anchor=NW, image=self.model)
-
-	def enemy_spawn():
+			game_sc.create_image(self.x, self.y, anchor=NW, image=self.model)
+	
+	def spawn():
 		'''Функция создает вражеский танк в случайной
 		позиции на карте
 		Функция ничего не принимает
-		и ничего не возвращает
+		и ничего не выводит
 		'''
-		# Создаем массив, заполненный нулями, для определения занятых блоков
+		
+		# Создаем  массив для определения занятых блоков, заполненный нулями
 		mass = [[[0] for _ in range(map_height)] for _ in range(map_width)]
 		
 		#проходимся в поисках занятых блоков и помечаем заполненные 1
@@ -386,7 +352,7 @@ def main():
 				else:
 					mass[w][h][0] = 0
 		
-		# Создаем список свободных позиций, т.е. равные 1
+		# Создаем список свободных позиций
 		free_positions = [(w, h) for w in range(map_width) for h in range(map_height) if mass[w][h][0] == 1]
 
 		# Выбор случайной свободной позиции из списка
@@ -422,15 +388,14 @@ def main():
 	bullets = [] #хранит все летящие снаряды
 
 	#определение размера и центрирование окна
-	monitor_h=root.winfo_screenheight()
-	monitor_w=root.winfo_screenwidth()
+	monitor_h, monitor_w = root.winfo_screenheight(), root.winfo_screenwidth()
 	root.geometry(f'{WIDTH + 4}x{HEIGHT + 2*TILE + 4}+{int(monitor_w//2 - WIDTH//2)}+{monitor_h//2 - HEIGHT//2}')
 
 	#игровое окно
 	game_sc = Canvas(root, width=WIDTH, height=HEIGHT, bg = 'khaki')
 	game_sc.place(x=0, y=2 * TILE)
 
-	#построение игрового поля
+	#строим карту
 	for col in range(0, map_height):
 		for row in range(0, map_width + 1):
 			element = map_file.read(1)
@@ -460,80 +425,51 @@ def main():
 
 	#создаем 5 начальных врагов
 	for k in range(1, 5):
-		enemy_spawn()
+		spawn()
 
 	#управление через клавиши
 	root.bind_all("<Key>", player.move)
 	root.bind_all("<KeyRelease>", player.stop)
 	root.bind_all("<space>", player.shoot)
 	
-	def again():
-		'''
-		функция вызывается по нажатии
-		кнопки "Играть снова"
-		
-		закрывает и открывает окно с
-		инициализацией новой игры
-		'''
-		root.destroy()
-		main()
-	
-	def game_over():
-		'''
-		Выводит надпись об окончании игры
-		и кнопку для начала новой игры
-		'''
-		game_over_lab=Label(game_sc, text="Игра окончена", font=("Comic Sans MS", 30)).place(relx=0.5, rely=0.4, anchor='center')
-		again_but = Button(game_sc, text="Играть снова", width=20, height=2, command = again).place(relx=0.5, rely=0.6, anchor='center')
-	
 	def game():
-		'''
-		Функция игрового процесса.
-		Здесь циклично выполняется вся логика
-		игровых объектов с частотой FPS.
-		Реализовано условие выхода из цикла.
-		'''
 		global title_score
 		
-		#обновление шага для врагов
 		for obj in enemies:
 			obj.update()
 		
-		#обновление позиции для игрока
 		player.update()
 		
-		#обновление шага для снарядов
 		for obj in bullets:
 			obj.update()
 		
 		#повторная генерация танков
 			if len(enemies) < 4:
 				#размещение нового противника
-				enemy_spawn()
-				#начисление и вывод очков за уничтожение
+				spawn()
+				#начисление очков за уничтожение
 				title_score += 100
 				score_label['text'] = "Счёт:" + str(title_score)
 		
 		#условие продолжения игры
-		if player.lives>0:
-			game_sc.after(FPS, game)
+		if player.lives > 0:
+			game_sc.after(20, game)
 		else:
-			#остановка действий игрока при уничтожении
-			#и подготовка для выхода из игры
+			#подготовка для выхода из игры
 			root.unbind_all("<Key>")
-			root.unbind_all("<space>")
 			root.unbind_all("<KeyRelease>")
-			#типо уничтожение управляемого танка
-			player.explosion()
-			game_sc.after(2000, game_over)
-			#для продолжения анимации
-			#игрового процесса
-			game_sc.after(FPS, game)
-			player.lives=1
+			for obj in objects:
+				objects.remove(obj)
+			for obj in bullets:
+				game_sc.delete(obj.bullet)
+				bullets.remove(obj)
+			for obj in enemies:
+				obj.life = False
+				enemies.remove(obj)
+				#game_sc.delete("all")
+				#root.destroy()
 	
-	#обновление холста
 	game_sc.update()
-	#начало игрового цикла
 	game()
 
 	root.mainloop()

@@ -4,11 +4,11 @@ from tkinter import messagebox
 
 def size():
 	
-	def map_editor():
+	def editor(width, height):
 		global map_width, map_height
 		
-		map_width=int(entry_1.get())
-		map_height=int(entry_2.get())
+		map_width=width
+		map_height=height
 		
 		WIDTH=map_width*TILE
 		HEIGHT=map_height*TILE
@@ -33,27 +33,16 @@ def size():
 		interface.place(x=0, y=0)
 		#################################
 		
+		global saved
+		saved = 0
+
 		def get_texture(event):
-			'''
-			Функция предназначена для получения
-			какого-либо блока, чтобы размещать
-			его на поле.
-			Функция принимает событие от нажатия
-			на кнопку мыши
-			'''
 			global selected_texture
 			selected_texture[0] = all_textures[all_texture_buttons[event.widget]]
 			selected_texture[1] = all_texture_buttons[event.widget]
 			show_selected_texture.config(image=selected_texture[0])
 
 		def paint(event):
-			'''
-			Функция предназначена для проставление
-			на квадратную область какого-либо
-			блока.
-			Функция принимает событие от нажатия
-			на кнопку мыши
-			'''
 			global selected_texture,map_buttons
 			event.widget.config(image=selected_texture[0])
 			map_buttons[event.widget][2] = selected_texture[1]
@@ -62,6 +51,9 @@ def size():
 			'''функция для сохранения созданной карты,
 			выполняеся после нажатия кнопки save
 			'''
+			global saved
+			saved+=1
+			
 			flag=0
 			#проверка на наличие только 1 танка
 			for i in range(map_height):
@@ -73,7 +65,7 @@ def size():
 			if flag!=1:
 				messagebox.showinfo("Прерывание сохранения", "Карта не сохранена. На поле должен быть ровно один танк.", parent=editor)
 			else:
-				#процесс сохранения сохранной карты
+				#процесс сохранения сохданной карты
 				txt = open("map.txt","w")
 				
 				for i in range(map_height):
@@ -86,11 +78,6 @@ def size():
 				txt.close()
 
 		def fill():
-			'''
-			Функция заполняет всё поле "активным"
-			блоком (для быстрого заполнения, например
-			кирпичём).
-			'''
 			global map_buttons
 			for i in map_buttons:
 				i.config(image=selected_texture[0])
@@ -113,38 +100,42 @@ def size():
 			temp_width = len(line) - 1
 			txt.close()
 			
-			map_editor(temp_width, temp_height)
-			
-			#меняем разрешение экрана под игровую карту
-			WIDTH = map_width*TILE
-			HEIGHT = map_height*TILE	
-			
-			txt = open("map.txt","r")
-			
-			for i in range(map_width):
-				for j in range(map_height):
-					element = txt.read(1)
-					if element=='\n': #проверка на символ переноса
+			if ((temp_height==map_height) and (temp_width==map_width)):
+				#меняем разрешение экрана под игровую карту
+				WIDTH = map_width*TILE
+				HEIGHT = map_height*TILE	
+				
+				txt = open("map.txt","r")
+				
+				for i in range(map_width):
+					for j in range(map_height):
 						element = txt.read(1)
-					for n in map_buttons.keys():
-						if map_buttons[n][0]==i and map_buttons[n][1]==j:
-							n.config(image=all_textures[element])
-							map_buttons[n][2] = element
-							
-			txt.close()
+						if element=='\n': #проверка на символ переноса
+							element = txt.read(1)
+						for n in map_buttons.keys():
+							if map_buttons[n][0]==i and map_buttons[n][1]==j:
+								n.config(image=all_textures[element])
+								map_buttons[n][2] = element
+								
+				txt.close()
+			else:
+				map_width=temp_width
+				map_height=temp_height
+				
+				editor.destroy()
+				editor(map_width, map_height)
+				
 		
-		#снова загрузка изображений
 		brick = PhotoImage(file="images/brick.png")
 		armor = PhotoImage(file="images/armor.png")
 		empty=PhotoImage(file="images/empty.png")
 		tank = PhotoImage(file="images/tank_up.png")
 		
-		#занесение изображений в библиотеку для ассоциативного взаимодействия
 		all_textures = {'.':empty,'%':brick, '#':armor, '@':tank}
 		
 		cnt=0
 		all_texture_buttons = {}
-		#создание панелей для выбора "активных" блоков
+		#создание кнопок для выбора блоков
 		for i in all_textures.keys():
 			texture_button = Button(interface, image=all_textures[i])
 			texture_button.place(x=16+cnt*(TILE+16), y=16)
@@ -152,8 +143,9 @@ def size():
 			cnt+=1
 			texture_button.bind('<Button-1>', get_texture)
 		
-		global selected_texture, map_buttons
+		global selected_texture
 		selected_texture=[empty,'.']
+		global map_buttons
 		map_buttons = {}
 		
 		#заполнение карты пустыми блоками для редактирования
@@ -170,18 +162,17 @@ def size():
 		save_in_file_button = Button(interface,text="Сохранить изменения",command = save_map)
 		save_in_file_button.place(x=WIDTH-4*TILE, y= 6)
 		
-		#load_from_file_button = Button(interface,text="Загрузить текущую",command=from_file_load)
-		#load_from_file_button.place(x=WIDTH-4*TILE, y= 38)
+		load_from_file_button = Button(interface,text="Загрузить текущую",command=from_file_load)
+		load_from_file_button.place(x=WIDTH-4*TILE, y= 38)
 		
 		editor.mainloop()
 	
-	#окно задания размеров поля
 	creator = Toplevel()
 	creator.title("Настройка размеров")
 	creator.resizable(0, 0)
 	monitor_h, monitor_w = creator.winfo_screenheight(), creator.winfo_screenwidth()
 	creator.geometry(f'330x150+{int(monitor_w//2 - 400)}+{monitor_h//2 - 300}')
-	label=Label(creator, text="Выберите размер поля в блоках или загрузите\nсуществующее поле").place(relx=0.5, anchor=N)
+	label=Label(creator, text="Выберите размер поля в блоках или оставьте по умолчанию").place(relx=0.5, anchor=N)
 	
 	Label(creator, text="Ширина в блоках:").place(relx=0.0, rely=0.4, anchor=W)
 	Label(creator, text="Высота в блоках:").place(relx=0.0, rely=0.6, anchor=W)
@@ -198,8 +189,7 @@ def size():
 	entry_2 = Entry(creator, width=5, textvariable=height_entry)
 	entry_2.place(relx=0.3, rely=0.6, anchor=W)
 	
-	Btn_1=Button(creator, text="Применить", command=lambda: map_editor).place(relx=0.9, rely=0.7, anchor=SE)
-	Btn_2=Button(creator, text="Загрузить текущую", command=map_editor()).place(relx=0.9, rely=0.9, anchor=SE)
+	Btn=Button(creator, text="Применить", command=lambda: editor(int(entry_1.get()), int(entry_2.get()))).place(relx=0.9, rely=0.9, anchor=SE)
 	
 	creator.mainloop()
 
