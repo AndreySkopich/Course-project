@@ -4,11 +4,11 @@ from tkinter import messagebox
 
 def size():
 	
-	def map_editor():
+	def map_editor(entry_1, entry_2):
 		global map_width, map_height
 		
-		map_width=int(entry_1.get())
-		map_height=int(entry_2.get())
+		map_width=entry_1
+		map_height=entry_2
 		
 		WIDTH=map_width*TILE
 		HEIGHT=map_height*TILE
@@ -198,8 +198,7 @@ def size():
 	entry_2 = Entry(creator, width=5, textvariable=height_entry)
 	entry_2.place(relx=0.3, rely=0.6, anchor=W)
 	
-	Btn_1=Button(creator, text="Применить", command=lambda: map_editor).place(relx=0.9, rely=0.7, anchor=SE)
-	Btn_2=Button(creator, text="Загрузить текущую", command=map_editor()).place(relx=0.9, rely=0.9, anchor=SE)
+	Btn_1=Button(creator, text="Применить", command=lambda: map_editor(int(entry_1.get()), int(entry_2.get()))).place(relx=0.9, rely=0.7, anchor=SE)
 	
 	creator.mainloop()
 
